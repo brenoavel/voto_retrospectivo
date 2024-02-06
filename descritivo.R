@@ -77,21 +77,16 @@ colors <- c("#FE9B2B", ggplot2::alpha('gray100', 0.3))
 # 2016
 
 ggplot(map16) +
-  geom_sf(aes(fill = `Segundo turno`), color = ggplot2::alpha('gray90', 0.2)) +
+  geom_sf(aes(fill = `Segundo turno`), color = ggplot2::alpha('gray70', 0.2)) +
   theme_map() +
   scale_fill_manual(values = colors)
 
 # 2020
 
 ggplot(map20) +
-  geom_sf(aes(fill = `Segundo turno`), color = ggplot2::alpha('gray90', 0.2)) +
+  geom_sf(aes(fill = `Segundo turno`), color = ggplot2::alpha('gray70', 0.2)) +
   theme_map() +
   scale_fill_manual(values = colors)
-
-
-
-
-
 
 #### Descritivo ####
 

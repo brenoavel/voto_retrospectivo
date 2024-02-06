@@ -10,7 +10,7 @@ library(car)
 
 ### Base com os dados eleitorais
 
-Segund <- readRDS("segundoRound.RDS")
+Segund <- readRDS("base.RDS")
 
 
 ### Preparação da Base 
