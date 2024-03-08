@@ -25,6 +25,7 @@ pop <- read.csv('população.csv')
 #### Preparação da base ####
 
 # Dataset principal
+#filtramos apenas os dados de primeiro turno, e criamos as variáveis 
 Segund <- base %>% 
   filter(turno==1) %>% 
   mutate(STurno = ifelse(eleitorado20 >200000, "Sim", "Não"),
