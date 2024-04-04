@@ -4,6 +4,7 @@
 
 library(electionsBR)
 library(dplyr)
+library(tidyr)
 
 #### Funções ####
 
@@ -35,10 +36,11 @@ eleicao2020 <- eleicao2020 %>%
     partido = SG_PARTIDO,
     candidato = NM_CANDIDATO,
     votos = QT_VOTOS_NOMINAIS_VALIDOS,
-    resultado = DS_SIT_TOT_TURNO
+    resultado = DS_SIT_TOT_TURNO,
+    id_municipio = CD_MUNICIPIO
   ) %>% 
   filter(DS_CARGO == 'Prefeito') %>% 
-  select(UF, municipio, Ano, turno, partido, candidato, votos, resultado)
+  select(UF, municipio, id_municipio, Ano, turno, partido, candidato, votos, resultado)
 
 eleicao2016 <- eleicao2016 %>% 
   rename(
@@ -49,10 +51,11 @@ eleicao2016 <- eleicao2016 %>%
     partido = SG_PARTIDO,
     candidato = NM_CANDIDATO,
     votos = QT_VOTOS_NOMINAIS,
-    resultado = DS_SIT_TOT_TURNO
+    resultado = DS_SIT_TOT_TURNO,
+    id_municipio = CD_MUNICIPIO
   ) %>% 
   filter(DS_CARGO == 'Prefeito') %>% 
-  select(UF, municipio, Ano, turno, partido, candidato, votos, resultado)
+  select(UF, municipio, id_municipio, Ano, turno, partido, candidato, votos, resultado)
 
 eleicao2012 <- eleicao2012 %>% 
   rename(
@@ -63,10 +66,11 @@ eleicao2012 <- eleicao2012 %>%
     partido = SG_PARTIDO,
     candidato = NM_CANDIDATO,
     votos = QT_VOTOS_NOMINAIS,
-    resultado = DS_SIT_TOT_TURNO
+    resultado = DS_SIT_TOT_TURNO,
+    id_municipio = CD_MUNICIPIO
   ) %>% 
   filter(DS_CARGO == "Prefeito") %>% 
-  select(UF, municipio, Ano, turno, partido, candidato, votos_total, resultado)
+  select(UF, municipio, id_municipio, Ano, turno, partido, candidato, votos, resultado)
 
 #criando a variável de incumbente 
 
@@ -75,7 +79,7 @@ eleicao2016 <- eleicao2016 %>%
   mutate(incumbente = ifelse(candidato %in% eleicao12$candidato, 1, 0))
 
 eleicao16 <- eleicao2016 %>% filter(resultado == "ELEITO")
-eleicao2020<- eleicao20 %>%
+eleicao2020<- eleicao2020 %>%
   mutate(incumbente = ifelse(candidato %in% eleicao16$candidato, 1, 0))
 
 #juntando os dados das duas eleições 
@@ -112,9 +116,10 @@ receita2016 <- receita2016 %>%
   rename(municipio = Nome.da.UE,
          candidato = Nome.candidato,
          valor = Valor.receita,
-         CPF = CPF.do.candidato
+         CPF = CPF.do.candidato,
+         id_municipio = CD.MUNICIPIO
   ) %>% 
-  group_by(UF, municipio, candidato, CPF) %>% 
+  group_by(UF, municipio, id_municipio, candidato, CPF) %>% 
   summarise(receita_total = sum(as.numeric(valor), na.rm = T)) %>% 
   mutate(Ano = "2016")
 
@@ -126,10 +131,11 @@ receita2020 <- receita2020 %>%
     municipio = NM_UE,
     CPF = NR_CPF_CANDIDATO,
     UF = SG_UF, 
-    turno = ST_TURNO
+    turno = ST_TURNO,
+    id_municipio = CD_MUNICIPIO
   ) %>%
   filter(DS_CARGO == "Prefeito", TP_PRESTACAO_CONTAS == 'FINAL') %>%
-  group_by(UF, municipio, candidato, CPF) %>%
+  group_by(UF, municipio, id_municipio, candidato, CPF) %>%
   summarise(
     receita_total = sum(as.numeric(valor))
   ) %>% 
@@ -144,7 +150,7 @@ receita <- rbind(receita2016, receita2020)
 #removendo alguns objetos do ambiente para limpar a memória 
 rm(receita2016, receita2020)
 
-####Criando base com os dados de partido dos governadores 
+####Criando a base com os dados de partido dos governadores. O dado foi coletado manualmente.
 
 gov16 <- data.frame(UF = c('AC', 'AL', 'AP', 'AM', 'BA', 'DF', 'CE', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
                            'RS', 'SC', 'RO', 'RR', 'SP', 'SE', 'TO'),
@@ -167,17 +173,60 @@ gov <- rbind(gov16, gov20)
 
 #### IDHM
   
+#Para facilitar a replicação, jã deixamos disponĩvel a base no repositõrio. Os dados foram retirados do: https://basedosdados.org/dataset/cbfc7253-089b-44e2-8825-755e1419efc8?table=ec5fb3d1-fa98-4ab3-8a02-4b9950048a83
+#Carregando a base de idhm
+idhm <- read.csv('idhm.csv')
 
+#filtrando apenas o ano de 2010, e selecionando as variáveis de interesse
+idhm <- idhm %>% 
+  filter(ano == 2010) %>% 
+  select(id_municipio, idhm)
 
+####Eleitorado 
 
+#Baixando os dados sobre os detalhes das zonas no município de 2016 e 2020
+eleitorado2016 <- elections_tse(2016, type = 'details_mun_zone')
+eleitorado2020 <- elections_tse(2020, type = 'details_mun_zone')
 
+#Selecionando as variáveis de interesse e calculando o número de eleitores por município de 2016 e 2020
+eleitorado2016 <- eleitorado2016 %>% 
+  filter(DS_CARGO == 'Prefeito') %>% 
+  group_by(SG_UF, NM_MUNICIPIO, CD_MUNICIPIO) %>% 
+  summarise(eleitorado16 = sum(QT_APTOS_TOT)) %>% 
+  rename(
+    UF = SG_UF,
+    municipio = NM_MUNICIPIO, 
+    id_municipio = CD_MUNICIPIO
+  )
 
+eleitorado2020 <- eleitorado2020 %>% 
+  filter(DS_CARGO == 'Prefeito') %>% 
+  group_by(SG_UF, NM_MUNICIPIO, CD_MUNICIPIO) %>% 
+  summarise(eleitorado20 = sum(QT_APTOS)) %>% 
+  rename(
+    UF = SG_UF,
+    municipio = NM_MUNICIPIO,
+    id_municipio = CD_MUNICIPIO
+  )
 
+#Juntando os dados sobre eleitorado de 2016 e 2020
+eleitorado <- merge(eleitorado2016, eleitorado2020, by = c('UF', 'id_municipio', 'municipio'))
 
+####PIB
+#Para facilitar a replicacao, ja deixamos disponivel a base no repositorio. Os dados foram retirados do: https://basedosdados.org/dataset/fcf025ca-8b19-4131-8e2d-5ddb12492347?table=fbbbe77e-d234-4113-8af5-98724a956943
+#Carregando a base de pib
+pib <- read.csv('pib.csv')
 
+#Selecionando as variáveis de interesse e separando a variável pib em duas variáveis diferentes
+pib <- pib %>% 
+  filter(ano %in% c(2016,2020)) %>% 
+  select(id_municipio, ano, pib) %>% 
+  pivot_wider(
+    names_from = ano,
+    values_from = pib
+  ) %>% 
+  rename(pib16 = '2016', pib20 = '2020')
 
+##### Criando a Base final
 
-
-
-
-
+#base <- 
